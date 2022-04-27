@@ -18,9 +18,43 @@ class QuotesSpider(scrapy.Spider):
     # The response parameter is an instance of TextResponse that holds the page content and has further helpful methods to handle it.
     # The parse() method usually parses the response, 
     # extracting the scraped data as dicts and also finding new URLs to follow and creating new requests (Request) from them.
+    
+    #########################################
+    # for saving the whole page (see already extracted content in mycrawler/...):
+    # run in root directory: scrapy crawl quotes
+
+    # def parse(self, response):
+    #     page = response.url.split("/")[-2]
+    #     filename = f'quotes-{page}.html'
+    #     with open(filename, 'wb') as f:
+    #         f.write(response.body)
+    #     self.log(f'Saved file {filename}')
+    
+    ##########################################
+    # for outout within the log
+    # run in root directory: scrapy crawl quotes -O quotes.json
+
+    # def parse(self, response):
+    #     for quote in response.css('div.quote'):
+    #         yield {
+    #             'text': quote.css('span.text::text').get(),
+    #             'author': quote.css('small.author::text').get(),
+    #             'tags': quote.css('div.tags a.tag::text').getall(),
+    #         }
+
+    ##########################################
     def parse(self, response):
-        page = response.url.split("/")[-2]
-        filename = f'quotes-{page}.html'
-        with open(filename, 'wb') as f:
-            f.write(response.body)
-        self.log(f'Saved file {filename}')
+        for quote in response.css('div.quote'):
+            yield {
+                'text': quote.css('span.text::text').get(),
+                'author': quote.css('small.author::text').get(),
+                'tags': quote.css('div.tags a.tag::text').getall(),
+            }
+
+        next_page = response.css('li.next a::attr(href)').get()
+        if next_page is not None:
+            # for handling relative URLs
+            # next_page = response.urljoin(next_page)
+            # yield scrapy.Request(next_page, callback=self.parse)
+            # .follow can handle relative URLs
+            yield response.follow(next_page, callback=self.parse)
